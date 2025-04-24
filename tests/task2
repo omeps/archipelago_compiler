@@ -1,0 +1,6 @@
+push: a
+pop: a
+if: a > b
+pop: b
+push: a
+end:
