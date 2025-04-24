@@ -303,9 +303,41 @@ pub fn compile(input: std.io.AnyReader, output: std.io.AnyWriter, err: std.io.An
                     island_len += 2;
                 }
             },
-            .end => {
+            .@"else" => {
                 const if_side = stack_island_sides.pop().?;
                 if (if_side != ptr_side) {
+                    switch (ptr_side) {
+                        .a => {
+                            try a_instruction_raster.appendSlice("j,");
+                            try b_instruction_raster.appendSlice("#,");
+                        },
+                        .b => {
+                            try a_instruction_raster.appendSlice("#,");
+                            try b_instruction_raster.appendSlice("j,");
+                        },
+                    }
+                    island_len += 1;
+                }
+                switch (if_side) {
+                    .a => {
+                        try a_instruction_raster.appendSlice("#\x81#\x81#,");
+                        try b_instruction_raster.appendSlice("#\x80f\x80#,");
+                    },
+                    .b => {
+                        try a_instruction_raster.appendSlice("#\x80f\x80#,");
+                        try b_instruction_raster.appendSlice("#\x81#\x81#,");
+                    },
+                }
+                island_len += 1;
+                try stack_island_sides.append(switch (if_side) {
+                    .a => .b,
+                    .b => .a,
+                });
+                ptr_side = if_side;
+            },
+            .end => {
+                const if_side = stack_island_sides.pop().?;
+                if (if_side == ptr_side) {
                     switch (ptr_side) {
                         .a => {
                             try a_instruction_raster.appendSlice("j,");
@@ -329,14 +361,12 @@ pub fn compile(input: std.io.AnyReader, output: std.io.AnyWriter, err: std.io.An
                         try a_instruction_raster.appendSlice("#,");
                     },
                 }
+                island_len += 1;
             },
             else => {},
         }
     }
-    if (ptr_side != .b) {
-        try a_instruction_raster.appendSlice("j,");
-        try b_instruction_raster.appendSlice("#,");
-    }
+    try a_instruction_raster.appendSlice("j,");
     var a_width: u32 = 1;
     var max_a_width: u32 = 1;
     var b_width: u32 = 1;
@@ -361,7 +391,7 @@ pub fn compile(input: std.io.AnyReader, output: std.io.AnyWriter, err: std.io.An
         },
         else => {},
     };
-    try output.writeByteNTimes(',', island_len + 3);
+    try output.writeByteNTimes(',', island_len + 2);
     try output.writeByte('\n');
     for (0..max_a_width) |width| {
         const crawl_depth = max_a_width - 1 - width;
@@ -387,7 +417,7 @@ pub fn compile(input: std.io.AnyReader, output: std.io.AnyWriter, err: std.io.An
     }
     std.debug.print("{s}\n", .{a_instruction_raster.items});
 
-    try output.writeByteNTimes(',', island_len + 3);
+    try output.writeByteNTimes(',', island_len + 2);
     try output.writeByte('\n');
     for (0..max_b_width) |crawl_depth| {
         var current_depth: usize = 0;
@@ -408,8 +438,8 @@ pub fn compile(input: std.io.AnyReader, output: std.io.AnyWriter, err: std.io.An
                 }
             },
         };
-        try output.writeByte('\n');
+        try output.writeAll("#,\n");
     }
-    try output.writeByteNTimes(',', island_len + 3);
+    try output.writeByteNTimes(',', island_len + 2);
     try output.writeByte('\n');
 }

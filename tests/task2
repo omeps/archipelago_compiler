@@ -3,4 +3,6 @@ pop: a
 if: a > b
   pop: b
   push: a
+else:
+  pop: a
 end:

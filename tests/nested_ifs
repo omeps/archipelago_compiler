@@ -1,0 +1,12 @@
+if: a > b
+  if: b = a
+    if: b < a
+      push: a
+      pop: a
+    else:
+      pop: b
+    end:
+  else:
+    pop: b
+  end:
+end:
