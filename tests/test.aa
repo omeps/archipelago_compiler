@@ -1,0 +1,9 @@
+if: a > 0
+else:
+end:
+if: b < a
+rol:
+if: a = 0
+pop:
+add:
+end:
