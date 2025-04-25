@@ -1,0 +1,42 @@
+send: a
+dec: b
+push: b 2
+sub: a
+while: a < b
+  push: b 2
+  sub: a
+  while: a < b
+    send: a 3
+    if: a > b
+      send: a
+      ror: b
+      send: b
+    end:
+    ror: b 4
+    send: b 2
+    inc: a
+  end:
+  pop: a
+  push: b 2
+  sub: a
+  while: a < b
+    send: a 2
+    rol: b 4
+    send: b 3
+    inc: a
+  end:
+  pop: a
+  inc: a
+end:
+pop: a
+push: b 2
+sub: a
+while: a < b
+  send: a
+  pop: a
+  send: b
+  inc: a 2
+end:
+pop: b
+pop: a
+send: a

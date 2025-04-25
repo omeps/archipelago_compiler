@@ -297,6 +297,68 @@ pub fn compile(input: std.io.AnyReader, output: std.io.AnyWriter, err: std.io.An
                     }
                 }
             },
+            .rol => |r| {
+                if (r.size < 2) return error.rolSizeLessThan2;
+                const swap_recieving_side = "p,o,p,j,#,a,p,j,#,#,s,j,#,s,";
+                const swap_helping_side = "#,#,#,s,p,j,#,s,p,p,j,p,o,j,";
+                if (r.stack != ptr_side) {
+                    switch (ptr_side) {
+                        .a => {
+                            try a_instruction_raster.appendSlice("j,");
+                            try b_instruction_raster.appendSlice("#,");
+                        },
+                        .b => {
+                            try a_instruction_raster.appendSlice("#,");
+                            try b_instruction_raster.appendSlice("j,");
+                        },
+                    }
+                    island_len += 1;
+                    ptr_side = r.stack;
+                }
+                island_len +=
+                    swap_helping_side.len / 2 * (r.size - 1) + 6 * (r.size - 2);
+                try a_instruction_raster.ensureUnusedCapacity(swap_helping_side.len * 2 * (r.size - 1) + 2 + 10 * (r.size - 2));
+                try b_instruction_raster.ensureUnusedCapacity(swap_helping_side.len * 2 * (r.size - 1) + 2 + 10 * (r.size - 2));
+                switch (r.stack) {
+                    .a => {
+                        for (1..r.size - 1) |_| {
+                            a_instruction_raster.appendSliceAssumeCapacity("p,o,");
+                            b_instruction_raster.appendSliceAssumeCapacity("#,#,");
+                        }
+                        b_instruction_raster.appendSliceAssumeCapacity(swap_helping_side);
+                        a_instruction_raster.appendSliceAssumeCapacity(swap_recieving_side);
+                        for (1..r.size - 1) |_| {
+                            b_instruction_raster.appendSliceAssumeCapacity("#,");
+                            a_instruction_raster.appendSliceAssumeCapacity("j,");
+                            a_instruction_raster.appendSliceAssumeCapacity("#,#,");
+                            b_instruction_raster.appendSliceAssumeCapacity("p,o,");
+                            a_instruction_raster.appendSliceAssumeCapacity("#,");
+                            b_instruction_raster.appendSliceAssumeCapacity("j,");
+                            b_instruction_raster.appendSliceAssumeCapacity(swap_helping_side);
+                            a_instruction_raster.appendSliceAssumeCapacity(swap_recieving_side);
+                        }
+                    },
+                    .b => {
+                        for (1..r.size - 1) |_| {
+                            b_instruction_raster.appendSliceAssumeCapacity("p,o,");
+                            a_instruction_raster.appendSliceAssumeCapacity("#,#,");
+                        }
+                        a_instruction_raster.appendSliceAssumeCapacity(swap_helping_side);
+                        b_instruction_raster.appendSliceAssumeCapacity(swap_recieving_side);
+                        for (1..r.size - 1) |_| {
+                            a_instruction_raster.appendSliceAssumeCapacity("#,");
+                            b_instruction_raster.appendSliceAssumeCapacity("j,");
+                            b_instruction_raster.appendSliceAssumeCapacity("#,#,");
+                            a_instruction_raster.appendSliceAssumeCapacity("p,o,");
+                            b_instruction_raster.appendSliceAssumeCapacity("#,");
+                            a_instruction_raster.appendSliceAssumeCapacity("j,");
+                            a_instruction_raster.appendSliceAssumeCapacity(swap_helping_side);
+                            b_instruction_raster.appendSliceAssumeCapacity(swap_recieving_side);
+                        }
+                    },
+                }
+            },
+
             .ror => |r| {
                 if (r.size < 2) return error.rorSizeLessThan2;
                 const swap_recieving_side = "p,o,p,j,#,a,p,j,#,#,s,j,#,s,";
@@ -536,7 +598,6 @@ pub fn compile(input: std.io.AnyReader, output: std.io.AnyWriter, err: std.io.An
                     },
                 }
             },
-            else => {},
         }
     }
     try a_instruction_raster.appendSlice("j,");

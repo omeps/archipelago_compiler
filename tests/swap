@@ -9,3 +9,6 @@ push: a
 ror: b 4
 ror: b 3
 ror: b
+rol: b
+rol: b 3
+rol: b 4

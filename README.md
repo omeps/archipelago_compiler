@@ -22,7 +22,7 @@ zig build
   - `cmp` must be `>`, `=` or `<`.
 ## Keywords
 - `ror: {stack} {size?}` <- rotate the top `size` elements of `stack`, sending the top one to the bottom. default `2`.
-- `rol: {stack} {size?}` <- UNIMPLEMENTED rotate the top `size` elements of `stack`, sending the bottom one to the top. default `2`.
+- `rol: {stack} {size?}` <- rotate the top `size` elements of `stack`, sending the bottom one to the top. default `2`.
 - `add: {stack} {size?}` <- add together the top `size` elements of `stack`, default `2`.
 - `sub: {stack} {size?}` <- subtract together the top `size` elements of `stack`, default `2`. The pattern (from the top) looks like `- + - + - + ...`
 - `pop: {stack} {size?}` <- pop off the top `size` elements of `stack`, default `1`.
