@@ -1,13 +1,11 @@
 push: a 2
 sub: b
-push: a
-pop: a
+send: a
 push: a 2
 sub: b
 if: a < b
   pop: b
-  push: b
-  pop: b
+  send: b
   push: a 2
   sub: b
   push: a
@@ -21,8 +19,7 @@ while: a > b
   pop: b
   push: b
   add: b
-  push: a
-  pop: a
+  send: a
   dec: a
   push: a 2
   sub: b

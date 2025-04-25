@@ -1,0 +1,11 @@
+push: a
+inc: a
+push: a
+inc: a
+push: a
+inc: a
+push: a
+
+ror: b 4
+ror: b 3
+ror: b

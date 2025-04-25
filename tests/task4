@@ -1,0 +1,8 @@
+push: a 2
+sub: b
+while: a > b
+  send: a 2
+  ror: b 3
+  send: b
+  inc: b
+end:
