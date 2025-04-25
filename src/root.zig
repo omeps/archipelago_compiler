@@ -148,11 +148,11 @@ fn interpret_sized_command(input: std.io.AnyReader, err: std.io.AnyWriter, compt
 pub fn compile(input: std.io.AnyReader, output: std.io.AnyWriter, err: std.io.AnyWriter, allocator: std.mem.Allocator) !void {
     var instruction_list = std.ArrayList(InstructionWithArgs).init(allocator);
     defer instruction_list.deinit();
-    GET_INSTRUCTIONS: {
+    {
         const instructions = string_map_to_enum(Instructions);
         var if_buffer: std.ArrayList(usize) = std.ArrayList(usize).init(allocator);
         defer if_buffer.deinit();
-        while (true) {
+        GET_INSTRUCTIONS: while (true) {
             var word: [9]u8 = undefined;
             word[0] = skip_whitespace(input) catch break :GET_INSTRUCTIONS;
             if (word[0] != ':') {
