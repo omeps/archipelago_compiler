@@ -209,21 +209,25 @@ pub fn compile(input: std.io.AnyReader, output: std.io.AnyWriter, err: std.io.An
     var b_instruction_raster = std.ArrayList(u8).init(allocator);
     defer b_instruction_raster.deinit();
     try b_instruction_raster.appendSlice("#,");
-    var stack_island_sides = std.ArrayList(AOrB).init(allocator);
-    defer stack_island_sides.deinit();
+    var stack = std.ArrayList(struct {
+        side: AOrB,
+        ty: enum { @"if", @"while" },
+    }).init(allocator);
+    defer stack.deinit();
     for (instruction_list.items) |instruction| {
         switch (instruction) {
-            inline .push, .pop, .add, .dec, .inc => |instr, tag| {
+            inline .push, .pop, .add, .dec, .inc, .sub => |instr, tag| {
                 var p = instr;
                 const raster_instruction: u8 = switch (tag) {
                     .push => 'p',
                     .pop => 'o',
                     .add => 'a',
+                    .sub => 's',
                     .dec => 'd',
                     .inc => 'i',
                     else => unreachable,
                 };
-                if (tag == .add) p.size -= 1;
+                if (tag == .add or tag == .sub) p.size -= 1;
                 island_len += p.size;
                 try a_instruction_raster.ensureUnusedCapacity(p.size * 2);
                 try b_instruction_raster.ensureUnusedCapacity(p.size * 2);
@@ -259,7 +263,7 @@ pub fn compile(input: std.io.AnyReader, output: std.io.AnyWriter, err: std.io.An
                 }
             },
             .@"if" => |p| {
-                try stack_island_sides.append(p.lhs);
+                try stack.append(.{ .side = p.lhs, .ty = .@"if" });
                 if (p.lhs != ptr_side) {
                     switch (ptr_side) {
                         .a => {
@@ -304,8 +308,8 @@ pub fn compile(input: std.io.AnyReader, output: std.io.AnyWriter, err: std.io.An
                 }
             },
             .@"else" => {
-                const if_side = stack_island_sides.pop().?;
-                if (if_side != ptr_side) {
+                const if_side = stack.pop().?;
+                if (if_side.side == ptr_side) {
                     switch (ptr_side) {
                         .a => {
                             try a_instruction_raster.appendSlice("j,");
@@ -318,7 +322,7 @@ pub fn compile(input: std.io.AnyReader, output: std.io.AnyWriter, err: std.io.An
                     }
                     island_len += 1;
                 }
-                switch (if_side) {
+                switch (if_side.side) {
                     .a => {
                         try a_instruction_raster.appendSlice("#\x81#\x81#,");
                         try b_instruction_raster.appendSlice("#\x80f\x80#,");
@@ -329,15 +333,18 @@ pub fn compile(input: std.io.AnyReader, output: std.io.AnyWriter, err: std.io.An
                     },
                 }
                 island_len += 1;
-                try stack_island_sides.append(switch (if_side) {
-                    .a => .b,
-                    .b => .a,
+                try stack.append(.{
+                    .side = switch (if_side.side) {
+                        .a => .b,
+                        .b => .a,
+                    },
+                    .ty = if_side.ty,
                 });
-                ptr_side = if_side;
+                ptr_side = if_side.side;
             },
-            .end => {
-                const if_side = stack_island_sides.pop().?;
-                if (if_side == ptr_side) {
+            .@"while" => |w| {
+                try stack.append(.{ .side = w.lhs, .ty = .@"while" });
+                if (ptr_side != w.lhs) {
                     switch (ptr_side) {
                         .a => {
                             try a_instruction_raster.appendSlice("j,");
@@ -349,19 +356,90 @@ pub fn compile(input: std.io.AnyReader, output: std.io.AnyWriter, err: std.io.An
                         },
                     }
                     island_len += 1;
-                    ptr_side = if_side;
                 }
-                switch (if_side) {
+                ptr_side = switch (w.lhs) {
+                    .a => .b,
+                    .b => .a,
+                };
+                switch (w.lhs) {
                     .a => {
-                        try a_instruction_raster.appendSlice("#\x81#\x81#,");
-                        try b_instruction_raster.appendSlice("#,");
+                        try std.fmt.format(a_instruction_raster.writer(), "#,j{c},#\x80f\x80#,", .{switch (w.cmp) {
+                            .@"<" => @as(u8, '<'),
+                            .@">" => '>',
+                            .@"=" => '=',
+                        }});
+                        try b_instruction_raster.appendSlice("f,#\x80#,#,");
                     },
                     .b => {
-                        try b_instruction_raster.appendSlice("#\x81#\x81#,");
-                        try a_instruction_raster.appendSlice("#,");
+                        try a_instruction_raster.appendSlice("f,#\x80#,#,");
+                        try std.fmt.format(b_instruction_raster.writer(), "#,j{c},#\x80f\x80#,", .{switch (w.cmp) {
+                            .@"<" => @as(u8, '<'),
+                            .@">" => '>',
+                            .@"=" => '=',
+                        }});
                     },
                 }
-                island_len += 1;
+                island_len += 3;
+            },
+            .end => {
+                const if_side = stack.pop().?;
+
+                switch (if_side.ty) {
+                    .@"if" => {
+                        if (if_side.side != ptr_side) {
+                            switch (ptr_side) {
+                                .a => {
+                                    try a_instruction_raster.appendSlice("j,");
+                                    try b_instruction_raster.appendSlice("#,");
+                                },
+                                .b => {
+                                    try a_instruction_raster.appendSlice("#,");
+                                    try b_instruction_raster.appendSlice("j,");
+                                },
+                            }
+                            island_len += 1;
+                            ptr_side = if_side.side;
+                        }
+                        switch (if_side.side) {
+                            .a => {
+                                try a_instruction_raster.appendSlice("#\x81#\x81#,");
+                                try b_instruction_raster.appendSlice("#,");
+                            },
+                            .b => {
+                                try b_instruction_raster.appendSlice("#\x81#\x81#,");
+                                try a_instruction_raster.appendSlice("#,");
+                            },
+                        }
+                        island_len += 1;
+                    },
+                    .@"while" => {
+                        if (if_side.side == ptr_side) {
+                            switch (ptr_side) {
+                                .a => {
+                                    try a_instruction_raster.appendSlice("j,");
+                                    try b_instruction_raster.appendSlice("#,");
+                                },
+                                .b => {
+                                    try a_instruction_raster.appendSlice("#,");
+                                    try b_instruction_raster.appendSlice("j,");
+                                },
+                            }
+                            island_len += 1;
+                        }
+                        ptr_side = if_side.side;
+                        switch (if_side.side) {
+                            .a => {
+                                try a_instruction_raster.appendSlice("#\x81#\x81#,");
+                                try b_instruction_raster.appendSlice("#\x81j,");
+                            },
+                            .b => {
+                                try a_instruction_raster.appendSlice("#\x81j,");
+                                try b_instruction_raster.appendSlice("#\x81#\x81#,");
+                            },
+                        }
+                        island_len += 1;
+                    },
+                }
             },
             else => {},
         }
@@ -415,7 +493,6 @@ pub fn compile(input: std.io.AnyReader, output: std.io.AnyWriter, err: std.io.An
         };
         try output.writeByte('\n');
     }
-    std.debug.print("{s}\n", .{a_instruction_raster.items});
 
     try output.writeByteNTimes(',', island_len + 2);
     try output.writeByte('\n');

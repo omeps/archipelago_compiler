@@ -1,0 +1,33 @@
+push: a 2
+sub: b
+push: a
+pop: a
+push: a 2
+sub: b
+if: a < b
+  pop: b
+  push: b
+  pop: b
+  push: a 2
+  sub: b
+  push: a
+  sub: b
+  pop: a
+  sub: a
+  push: a 2
+  sub: b
+end:
+while: a > b
+  pop: b
+  push: b
+  add: b
+  push: a
+  pop: a
+  dec: a
+  push: a 2
+  sub: b
+end:
+pop: b 2
+
+
+

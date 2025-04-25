@@ -1,10 +1,8 @@
 if: a > b
   if: b = a
-    if: b < a
+    while: b < a
       push: a
       pop: a
-    else:
-      pop: b
     end:
   else:
     pop: b

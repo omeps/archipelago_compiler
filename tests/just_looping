@@ -1,0 +1,4 @@
+inc: a 5
+while: a > b
+  dec: a
+end:
